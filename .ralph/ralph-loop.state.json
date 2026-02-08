@@ -1,0 +1,13 @@
+{
+  "active": true,
+  "iteration": 2,
+  "minIterations": 1,
+  "maxIterations": 0,
+  "completionPromise": "COMPLETE",
+  "tasksMode": false,
+  "taskPromise": "READY_FOR_NEXT_TASK",
+  "prompt": "follow the @PLAN.md , reference @PRD.md to cross check if needed. use subagents intelligently to keep the main agent small context size",
+  "startedAt": "2026-02-08T09:23:49.097Z",
+  "model": "",
+  "agent": "opencode"
+}
