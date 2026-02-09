@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "note": "./src/cli/index.ts"
+    "note": "src/cli/index.ts"
   },
   "scripts": {
     "dev": "tsx src/cli/index.ts",
@@ -26,5 +26,10 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
-  }
+  },
+  "description": "",
+  "main": "test-db.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

@@ -1,0 +1,9 @@
+.git/*
+.ralph/*
+
+node_modules/*
+dist/*
+dist/
+.note-taker/
+test-vault*/
+.seed-data/
