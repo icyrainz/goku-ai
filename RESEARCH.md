@@ -295,7 +295,7 @@ Device B (SQLite + CR-SQLite)
 
 **Mobile — React Native + Expo**
 - `expo-sqlite` with CR-SQLite integration
-- Share sheet integration (share from any app → note-taker)
+- Share sheet integration (share from any app → goku-ai)
 - Offline-first, background sync
 - Quick capture widget
 - Entity extraction runs on device (GLiNER is lightweight enough) or deferred to desktop/server

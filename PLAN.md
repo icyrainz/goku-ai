@@ -16,7 +16,7 @@ Each task is self-contained. Prerequisites list which tasks must be complete bef
 2. Edit `package.json` to exactly:
 ```json
 {
-  "name": "note-taker",
+  "name": "goku-ai",
   "version": "0.1.0",
   "type": "module",
   "bin": {
@@ -103,7 +103,7 @@ export interface Config {
 ```
 
 **Logic:**
-1. Try to read `~/.config/note-taker/config.toml` using `fs.readFileSync`. If it doesn't exist, use all defaults.
+1. Try to read `~/.config/goku-ai/config.toml` using `fs.readFileSync`. If it doesn't exist, use all defaults.
 2. Parse TOML with `smol-toml` (`import { parse } from 'smol-toml'`).
 3. Apply env var overrides on top of file values (env vars win).
 4. Apply defaults for any missing values.
@@ -166,8 +166,8 @@ model = ""
 Create `src/core/db.ts` that exports `getDb(config: Config)` returning a `better-sqlite3` Database instance.
 
 **Exact behavior:**
-1. DB path = `path.join(config.vault.path, '.note-taker', 'index.db')`
-2. Create the `.note-taker` directory if it doesn't exist (`fs.mkdirSync` with `recursive: true`)
+1. DB path = `path.join(config.vault.path, '.app-data', 'index.db')`
+2. Create the `.app-data` directory if it doesn't exist (`fs.mkdirSync` with `recursive: true`)
 3. Open database with `new Database(dbPath)`
 4. Run these pragmas:
 ```sql
@@ -267,7 +267,7 @@ export function getDb(config: Config): Database.Database {
 }
 ```
 
-**Verify**: Call `getDb()`, check that `.note-taker/index.db` file is created in vault path. Run `sqlite3 index.db ".tables"` and see all tables.
+**Verify**: Call `getDb()`, check that `.app-data/index.db` file is created in vault path. Run `sqlite3 index.db ".tables"` and see all tables.
 
 ---
 
@@ -298,8 +298,8 @@ export const initCommand = new Command('init')
     // Create vault directory
     fs.mkdirSync(resolved, { recursive: true });
 
-    // Create .note-taker subdirectory
-    fs.mkdirSync(path.join(resolved, '.note-taker'), { recursive: true });
+    // Create .app-data subdirectory
+    fs.mkdirSync(path.join(resolved, '.app-data'), { recursive: true });
 
     // Load config with overridden vault path, initialize DB
     const config = loadConfig();
@@ -307,7 +307,7 @@ export const initCommand = new Command('init')
     getDb(config);
 
     // Write default config if none exists
-    const configDir = path.join(os.homedir(), '.config', 'note-taker');
+    const configDir = path.join(os.homedir(), '.config', 'goku-ai');
     const configPath = path.join(configDir, 'config.toml');
     if (!fs.existsSync(configPath)) {
       fs.mkdirSync(configDir, { recursive: true });
@@ -398,7 +398,7 @@ const EXTENSION_MAP: Record<string, string> = {
 
 // Hidden dirs to always skip when scanning
 export const SKIP_DIRS = new Set([
-  '.git', '.obsidian', '.note-taker', '.trash',
+  '.git', '.obsidian', '.app-data', '.trash',
   '.DS_Store', 'node_modules',
 ]);
 

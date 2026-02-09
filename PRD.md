@@ -140,7 +140,7 @@ The LLM is used for three distinct tasks, each with its own system prompt:
 
 3. **Question Answering** — Given a question + relevant graph context, generate an answer with entity references.
 
-**Configuration** (`~/.config/note-taker/config.toml`):
+**Configuration** (`~/.config/goku-ai/config.toml`):
 ```toml
 [vault]
 path = "~/notes"  # vault directory
@@ -548,7 +548,7 @@ For the prototype, start with exact + fuzzy matching. LLM-assisted dedup is P1.
 ### Project Structure
 
 ```
-note-taker/
+goku-ai/
 ├── src/
 │   ├── cli/                # Command handlers
 │   │   ├── init.ts
