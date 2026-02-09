@@ -6,6 +6,7 @@ const EXTENSION_MAP: Record<string, string> = {
   '.txt': 'text',
   '.csv': 'csv',
   '.tsv': 'csv',
+  '.json': 'json',
 };
 
 export const SKIP_DIRS = new Set([

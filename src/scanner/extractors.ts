@@ -45,10 +45,6 @@ function parseFrontmatter(content: string): { frontmatter: Record<string, unknow
       frontmatter[key] = value;
     }
   }
-      frontmatter[key] = value;
-    }
-  }
-
   return { frontmatter, body };
 }
 

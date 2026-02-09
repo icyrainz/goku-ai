@@ -38,14 +38,13 @@ export const statusCommand = new Command('status')
 
     // Query DB for stats
     const docCountResult = db.prepare('SELECT COUNT(*) as count FROM documents').get() as { count: number } | undefined;
-    const docCountByKind = db.prepare('SELECT kind, COUNT(*) as count FROM documents GROUP BY kind').all();
     const processedCount = db.prepare('SELECT processed, COUNT(*) as count FROM documents GROUP BY processed').all();
     const entityCountByType = db.prepare('SELECT type, COUNT(*) as count FROM entities GROUP BY type ORDER BY count DESC').all();
     const relationshipCount = db.prepare('SELECT COUNT(*) as count FROM relationships').get() as { count: number } | undefined;
 
     // Output format
     console.log(`Vault:       ${vaultPath} (${fileCount} files)`);
-    console.log(`Entries:     ${(docCountByKind as any[]).find((row: any) => row.kind === 'entry')?.count ?? 0} quick entries`);
+    console.log(`Documents:   ${docCountResult?.count ?? 0} indexed`);
     console.log('');
 
     console.log('Processing:');

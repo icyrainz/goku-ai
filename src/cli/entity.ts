@@ -46,7 +46,7 @@ export const entityCommand = new Command('entity')
     if (docs.length > 0) {
       console.log('\nFound In Documents:');
       docs.forEach((doc, i) => {
-        const docStr = `${i + 1}. ${doc.kind === 'file' ? doc.file_path : '(entry)'} – ${doc.title || doc.name}`;
+        const docStr = `${i + 1}. ${doc.file_path || '(unknown)'} – ${doc.title || doc.name}`;
         console.log(`   ${i + 1}. ${docStr}`);
       });
     } else {

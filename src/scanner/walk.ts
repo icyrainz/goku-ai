@@ -8,29 +8,26 @@ export interface VaultFile {
   fileType: string;
 }
 
-export function walkVault(vaultPath: string): VaultFile[] {
+export function walkVault(vaultPath: string, rootPath?: string): VaultFile[] {
+  const root = rootPath ?? vaultPath;
   const results: VaultFile[] = [];
   const entries = fs.readdirSync(vaultPath, { withFileTypes: true });
 
   for (const entry of entries) {
     const fullPath = path.join(vaultPath, entry.name);
-    const relPath = path.relative(vaultPath, fullPath);
 
     if (entry.isDirectory()) {
-      // Skip hidden dirs and known skip dirs
       if (entry.name.startsWith('.') || ['.git', '.obsidian', '.app-data', '.trash'].includes(entry.name)) {
         continue;
       }
-      // Recurse into subdirectory
-      const subFiles = walkVault(fullPath);
+      const subFiles = walkVault(fullPath, root);
       results.push(...subFiles);
     } else if (entry.isFile()) {
-      // Check if file type is supported
       if (isSupportedFile(fullPath)) {
         const fileType = detectFileType(fullPath);
         if (fileType) {
           results.push({
-            relativePath: relPath,
+            relativePath: path.relative(root, fullPath),
             absolutePath: fullPath,
             fileType,
           });
@@ -39,7 +36,6 @@ export function walkVault(vaultPath: string): VaultFile[] {
     }
   }
 
-  // Sort results by relativePath alphabetically
   results.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
   return results;
 }

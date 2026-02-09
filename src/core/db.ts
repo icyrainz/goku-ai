@@ -5,34 +5,46 @@ import { join } from 'node:path';
 
 let _db: Database.Database | null = null;
 
-/**
- * Get the singleton database instance for the given config.
- * Creates the DB directory and schema if not already present.
- */
+function columnExists(db: Database.Database, table: string, column: string): boolean {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return cols.some(c => c.name === column);
+}
+
+function tableExists(db: Database.Database, name: string): boolean {
+  return !!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(name);
+}
+
+function migrateDocumentsTable(db: Database.Database): void {
+  if (!tableExists(db, 'documents')) return;
+
+  if (!columnExists(db, 'documents', 'kind')) {
+    db.exec("ALTER TABLE documents ADD COLUMN kind TEXT NOT NULL DEFAULT 'file'");
+  }
+  if (!columnExists(db, 'documents', 'content')) {
+    db.exec("ALTER TABLE documents ADD COLUMN content TEXT");
+  }
+}
+
 export function getDb(config: Config): Database.Database {
   if (_db) return _db;
 
-  // Determine DB path: config.vault.path/.app-data/index.db
-  const dbPath = join(config.vault.path, '.app-data', 'index.db');
-
-  // Ensure the directory exists
   const dbDir = join(config.vault.path, '.app-data');
+  const dbPath = join(dbDir, 'index.db');
+
   if (!existsSync(dbDir)) {
     mkdirSync(dbDir, { recursive: true });
   }
 
-  // Open the database
   const db = new Database(dbPath);
-
-  // Run pragmas
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA foreign_keys = ON;');
 
-  // Create tables if they don't exist
-  const createTablesSQL = `
+  migrateDocumentsTable(db);
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS documents (
       id            TEXT PRIMARY KEY,
-      kind          TEXT NOT NULL CHECK (kind IN ('file', 'entry')),
+      kind          TEXT NOT NULL DEFAULT 'file',
       file_path     TEXT UNIQUE,
       file_hash     TEXT,
       file_type     TEXT,
@@ -84,21 +96,19 @@ export function getDb(config: Config): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_relationships_target ON relationships(target_id);
     CREATE INDEX IF NOT EXISTS idx_document_entities_doc ON document_entities(document_id);
     CREATE INDEX IF NOT EXISTS idx_document_entities_entity ON document_entities(entity_id);
-  `;
+  `);
 
-  db.exec(createTablesSQL);
-
-  // Create FTS5 tables (cannot use IF NOT EXISTS)
-  const hasFts = db.prepare(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name='documents_fts'"
-  ).get();
-
-  if (!hasFts) {
+  if (!tableExists(db, 'documents_fts')) {
     db.exec(`
       CREATE VIRTUAL TABLE documents_fts USING fts5(
         title, extracted_text,
         content=documents, content_rowid=rowid
       );
+    `);
+  }
+
+  if (!tableExists(db, 'entities_fts')) {
+    db.exec(`
       CREATE VIRTUAL TABLE entities_fts USING fts5(
         name, aliases,
         content=entities, content_rowid=rowid
@@ -106,7 +116,6 @@ export function getDb(config: Config): Database.Database {
     `);
   }
 
-  // Singleton pattern
   _db = db;
   return _db;
 }

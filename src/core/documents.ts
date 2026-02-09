@@ -21,10 +21,6 @@ function now(): string {
   return new Date().toISOString();
 }
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 /**
  * Insert a new document (file or entry) into the database.
  * Returns the document ID.
@@ -40,50 +36,12 @@ export function createFileDocument(
   metadata: Record<string, unknown>
 ): string  // returns document id
 {
-  const stmt = db.prepare(`
+  const id = nanoid();
+  db.prepare(`
     INSERT INTO documents (id, kind, file_path, file_hash, file_type, title, date, metadata, extracted_text, processed, created_at, updated_at)
     VALUES (?, 'file', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
-  `);
-  const result = stmt.run(
-    nanoid(),
-    filePath,
-    fileHash,
-    fileType,
-    title,
-    date,
-    extractedText,
-    JSON.stringify(metadata),
-    now(),
-    now()
-  );
-  return String(result.lastInsertRowid);
-}
-
-/**
- * Create a new entry document.
- * Returns the document ID.
- */
-export function createEntry(
-  db: Database.Database,
-  content: string
-): string  // returns document id
-{
-  const title = content.split('\n')[0] || 'Untitled';
-  const truncatedTitle = title.length > 100 ? title.substring(0, 100) + '...' : title;
-  const stmt = db.prepare(`
-    INSERT INTO documents (id, kind, content, title, date, extracted_text, processed, created_at, updated_at)
-    VALUES (?, 'entry', ?, ?, ?, ?, 0, ?, ?)
-  `);
-  const result = stmt.run(
-    nanoid(),
-    content,
-    truncatedTitle,
-    today(),
-    content,
-    now(),
-    now()
-  );
-  return String(result.lastInsertRowid);
+  `).run(id, filePath, fileHash, fileType, title, date, JSON.stringify(metadata), extractedText, now(), now());
+  return id;
 }
 
 /**

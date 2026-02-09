@@ -11,7 +11,9 @@ default:
     @echo "Vault location: {{vault}}"
     @echo ""
     @echo "Daily Workflow:"
-    @echo "  just daily              - Create today's daily note"
+    @echo "  just daily              - Open today's daily note"
+    @echo "  just daily 2026-02-07   - Open daily note for a specific date"
+    @echo "  just quick              - Create a one-off quick note"
     @echo "  just today              - View today's overview"
     @echo "  just view 2026-01-07    - View specific date"
     @echo ""
@@ -28,23 +30,28 @@ default:
     @echo "  just ask <question>     - Ask natural language question"
     @echo ""
     @echo "Import & Enrich:"
+    @echo "  just import-daily <dir> - Import daily notes from directory"
     @echo "  just enrich <name>      - Enrich entity with metadata"
     @echo ""
     @echo "Development:"
     @echo "  just test               - Run tests"
     @echo "  just typecheck          - TypeScript type check"
 
-# Create or view a daily note
-daily date='':
+# Open today's daily note (one file per day)
+daily date="":
     {{note}} daily {{date}}
+
+# Create a one-off quick note
+quick:
+    {{note}} quick
 
 # View today's overview
 today:
-    {{note}} daily --view
+    {{note}} today
 
 # View a specific date's overview
 view date:
-    {{note}} daily {{date}} --view
+    {{note}} today {{date}}
 
 # Initialize the default persistent vault
 init:
@@ -81,6 +88,10 @@ search query:
 # Ask a question
 ask question:
     {{note}} ask "{{question}}"
+
+# Import daily notes from a directory
+import-daily dir:
+    {{note}} import daily-notes "{{dir}}"
 
 # Run tests
 test:

@@ -1,7 +1,9 @@
 import type { Config } from '../config.js';
 import { chatCompletion } from './client.js';
 import { resolveModel } from '../config.js';
-import { searchEntities, getRelatedEntities, getDocumentsForEntity } from '../core/entities.js';
+import { parseJsonArray } from './parse-json.js';
+import { searchEntities, searchDocumentEntities, getRelatedEntities, getDocumentsForEntity } from '../core/entities.js';
+import type { EntityRow } from '../core/entities.js';
 import type Database from 'better-sqlite3';
 
 const ASK_SYSTEM_PROMPT = `You are a knowledge graph assistant. Answer the user's question using ONLY the provided context from their personal knowledge graph.
@@ -13,6 +15,59 @@ Rules:
 - Be concise and direct.
 - When mentioning amounts or dates, be specific.`;
 
+const KEYWORD_EXTRACTION_PROMPT = `Extract search keywords from this question about a personal knowledge graph.
+Return a JSON array of strings — only nouns, proper nouns, and named entities.
+Omit verbs, stop words, question words, pronouns, and generic actions.
+Return ONLY the JSON array, no other text.
+
+Examples:
+"where did i order pizza" → ["pizza"]
+"how much did the kitchen renovation cost" → ["kitchen renovation"]
+"what did John say about the project" → ["John", "project"]
+"where did i eat mapo tofu" → ["mapo tofu"]`;
+
+async function extractSearchKeywords(config: Config, question: string): Promise<string[]> {
+  try {
+    const response = await chatCompletion(
+      config,
+      [
+        { role: 'system', content: KEYWORD_EXTRACTION_PROMPT },
+        { role: 'user', content: question },
+      ],
+      resolveModel(config, 'extraction')
+    );
+
+    const parsed = parseJsonArray(response);
+    return parsed
+      .filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+      .map(s => s.trim());
+  } catch {
+    return [];
+  }
+}
+
+const SNIPPET_WINDOW = 300;
+
+function extractRelevantSnippet(
+  content: string | null | undefined,
+  entityName: string,
+  mention: string | null | undefined
+): string {
+  if (!content) return mention || '';
+
+  const searchTerm = mention || entityName;
+  const idx = content.toLowerCase().indexOf(searchTerm.toLowerCase());
+
+  if (idx === -1) return content.slice(0, SNIPPET_WINDOW);
+
+  const start = Math.max(0, idx - SNIPPET_WINDOW / 2);
+  const end = Math.min(content.length, idx + searchTerm.length + SNIPPET_WINDOW / 2);
+  let snippet = content.slice(start, end).trim();
+  if (start > 0) snippet = '...' + snippet;
+  if (end < content.length) snippet = snippet + '...';
+  return snippet;
+}
+
 interface AskResult {
   answer: string;
   referencedEntityIds: string[];
@@ -23,9 +78,29 @@ export async function askQuestion(
   db: Database.Database,
   question: string
 ): Promise<AskResult> {
-  // Step 1: Find relevant entities by searching the question terms
-  const searchResults = searchEntities(db, question);
-  const topEntities = searchResults.slice(0, 10);
+  // Step 1: Extract search keywords from the question, then search entities + documents
+  const keywords = await extractSearchKeywords(config, question);
+  const entityMap = new Map<string, EntityRow>();
+
+  if (keywords.length > 0) {
+    for (const keyword of keywords) {
+      for (const entity of searchEntities(db, keyword)) {
+        entityMap.set(entity.id, entity);
+      }
+      for (const entity of searchDocumentEntities(db, keyword)) {
+        entityMap.set(entity.id, entity);
+      }
+    }
+  }
+
+  // Fallback: search with the raw question if keyword extraction found nothing
+  if (entityMap.size === 0) {
+    for (const entity of searchEntities(db, question)) {
+      entityMap.set(entity.id, entity);
+    }
+  }
+
+  const topEntities = [...entityMap.values()].slice(0, 10);
 
   if (topEntities.length === 0) {
     return {
@@ -64,7 +139,7 @@ export async function askQuestion(
       contextText += 'Mentioned in:\n';
       for (const doc of docs.slice(0, 5)) {
         const source = doc.file_path || `(entry ${doc.date || ''})`;
-        const preview = doc.content?.slice(0, 200) || doc.mention || '';
+        const preview = extractRelevantSnippet(doc.content, entity.name, doc.mention);
         contextText += `  - ${source}: "${preview}"\n`;
       }
     }

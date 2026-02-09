@@ -138,7 +138,15 @@ The LLM is used for three distinct tasks, each with its own system prompt:
    ]
    ```
 
-3. **Question Answering** — Given a question + relevant graph context, generate an answer with entity references.
+3. **Question Answering** — Two-phase retrieval-then-answer:
+
+   **Phase 1 — Context Retrieval**: Use the LLM (extraction model) to extract search keywords from the natural language question — nouns, proper nouns, and named entities only (no verbs or stop words). Search each keyword against:
+   - `entities_fts` (entity names + aliases)
+   - `documents_fts` (document titles + extracted text), surfacing entities linked to matching documents via `document_entities`
+
+   Deduplicate and take the top 10 entities. If keyword extraction fails or returns nothing, fall back to searching the raw question string.
+
+   **Phase 2 — Answer Generation**: For each retrieved entity, gather context: aliases, 1-hop related entities, and document excerpts (using `COALESCE(content, extracted_text)` since file documents store text in `extracted_text`, not `content`). Send the assembled context + question to the LLM (ask model) to generate an answer with entity references.
 
 **Configuration** (`~/.config/goku-ai/config.toml`):
 ```toml

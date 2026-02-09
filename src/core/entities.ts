@@ -170,12 +170,30 @@ export function getRelatedEntities(db: Database.Database, entityId: string) {
 
 export function getDocumentsForEntity(db: Database.Database, entityId: string) {
   return db.prepare(`
-    SELECT d.id as document_id, de.mention, d.kind, d.file_path, d.title, d.date, d.content
+    SELECT d.id as document_id, de.mention, d.kind, d.file_path, d.title, d.date,
+           COALESCE(d.content, d.extracted_text) as content
     FROM documents d
     JOIN document_entities de ON d.id = de.document_id
     WHERE de.entity_id = ?
     ORDER BY d.date DESC
   `).all(entityId) as any[];
+}
+
+export function searchDocumentEntities(db: Database.Database, query: string): EntityRow[] {
+  try {
+    const rows = db.prepare(`
+      SELECT DISTINCT e.* FROM entities e
+      JOIN document_entities de ON e.id = de.entity_id
+      JOIN documents d ON d.id = de.document_id
+      JOIN documents_fts f ON d.rowid = f.rowid
+      WHERE documents_fts MATCH ?
+      LIMIT 20
+    `).all(query) as EntityRow[];
+    return rows;
+  } catch {
+    // FTS5 can throw on special characters or malformed queries
+    return [];
+  }
 }
 
 export function getEntityCounts(db: Database.Database): { type: string; count: number }[] {
