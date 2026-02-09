@@ -8,19 +8,30 @@ export const rebuildCommand = new Command('rebuild')
     const config = loadConfig();
     const db = getDb(config);
 
-    // Delete all graph data
     db.exec('DELETE FROM document_entities');
     db.exec('DELETE FROM relationships');
     db.exec('DELETE FROM entities');
 
-    // Clear FTS tables
-    db.exec("DELETE FROM entities_fts");
-    db.exec("DELETE FROM documents_fts");
+    // Drop and recreate FTS tables (handles corruption gracefully)
+    db.exec('DROP TABLE IF EXISTS entities_fts');
+    db.exec('DROP TABLE IF EXISTS documents_fts');
 
-    // Reset all documents to pending
+    db.exec(`
+      CREATE VIRTUAL TABLE entities_fts USING fts5(
+        name, aliases,
+        content=entities, content_rowid=rowid
+      )
+    `);
+    db.exec(`
+      CREATE VIRTUAL TABLE documents_fts USING fts5(
+        title, extracted_text,
+        content=documents, content_rowid=rowid
+      )
+    `);
+
     db.exec("UPDATE documents SET processed = 0, error_msg = NULL");
 
-    // Re-populate documents FTS
+    // Re-populate documents FTS from existing documents
     db.exec(`
       INSERT INTO documents_fts(rowid, title, extracted_text)
       SELECT rowid, title, extracted_text FROM documents

@@ -29,6 +29,9 @@ default:
     @echo "  just search <query>     - Search entities and documents"
     @echo "  just ask <question>     - Ask natural language question"
     @echo ""
+    @echo "Maintenance:"
+    @echo "  just rebuild            - Nuke graph index and reprocess everything"
+    @echo ""
     @echo "Import & Enrich:"
     @echo "  just import-daily <dir> - Import daily notes from directory"
     @echo "  just enrich <name>      - Enrich entity with metadata"
@@ -88,6 +91,10 @@ search query:
 # Ask a question
 ask question:
     {{note}} ask "{{question}}"
+
+# Nuke graph index and reprocess everything from scratch
+rebuild:
+    {{note}} rebuild
 
 # Import daily notes from a directory
 import-daily dir:
