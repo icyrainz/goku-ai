@@ -18,7 +18,7 @@ export function walkVault(vaultPath: string): VaultFile[] {
 
     if (entry.isDirectory()) {
       // Skip hidden dirs and known skip dirs
-      if (entry.name.startsWith('.') || ['.git', '.obsidian', '.note-taker', '.trash'].includes(entry.name)) {
+      if (entry.name.startsWith('.') || ['.git', '.obsidian', '.app-data', '.trash'].includes(entry.name)) {
         continue;
       }
       // Recurse into subdirectory

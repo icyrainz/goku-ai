@@ -12,11 +12,11 @@ let _db: Database.Database | null = null;
 export function getDb(config: Config): Database.Database {
   if (_db) return _db;
 
-  // Determine DB path: config.vault.path/.note-taker/index.db
-  const dbPath = join(config.vault.path, '.note-taker', 'index.db');
+  // Determine DB path: config.vault.path/.app-data/index.db
+  const dbPath = join(config.vault.path, '.app-data', 'index.db');
 
   // Ensure the directory exists
-  const dbDir = join(config.vault.path, '.note-taker');
+  const dbDir = join(config.vault.path, '.app-data');
   if (!existsSync(dbDir)) {
     mkdirSync(dbDir, { recursive: true });
   }

@@ -1,5 +1,5 @@
 {
-  "name": "note-taker",
+  "name": "my-app",
   "version": "0.1.0",
   "type": "module",
   "bin": {

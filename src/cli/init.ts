@@ -17,8 +17,8 @@ export const initCommand = new Command('init')
     // Create vault directory
     fs.mkdirSync(resolved, { recursive: true });
 
-    // Create .note-taker subdirectory
-    fs.mkdirSync(path.join(resolved, '.note-taker'), { recursive: true });
+    // Create .app-data subdirectory
+    fs.mkdirSync(path.join(resolved, '.app-data'), { recursive: true });
 
     // Load config with overridden vault path, initialize DB
     const config = loadConfig();
@@ -26,7 +26,7 @@ export const initCommand = new Command('init')
     getDb(config);
 
     // Write config file with updated vault path (overwrites any existing config)
-    const configDir = path.join(os.homedir(), '.config', 'note-taker');
+    const configDir = path.join(os.homedir(), '.config', 'my-app');
     const configPath = path.join(configDir, 'config.toml');
     fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(configPath, `[vault]\npath = "${resolved}"\n\n[llm]\nbase_url = "http://localhost:11434/v1"\nmodel = "mistral"\napi_key = ""\n`);

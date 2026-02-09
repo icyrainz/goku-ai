@@ -11,7 +11,7 @@ const EXTENSION_MAP: Record<string, string> = {
 export const SKIP_DIRS = new Set([
   '.git',
   '.obsidian',
-  '.note-taker',
+  '.app-data',
   '.trash',
   '.DS_Store',
   'node_modules',

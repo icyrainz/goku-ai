@@ -1,4 +1,4 @@
-# note-taker CLI shortcuts
+# CLI shortcuts
 # Usage: just <recipe>
 
 vault := ".vault/vault-main"
@@ -6,7 +6,7 @@ note := "npx tsx src/cli/index.ts"
 
 # Show available commands (default recipe)
 default:
-    @echo "note-taker - AI-powered personal knowledge graph"
+    @echo "My App - AI-powered personal knowledge graph"
     @echo ""
     @echo "Vault location: {{vault}}"
     @echo ""

@@ -1,4 +1,4 @@
-# Note-Taker: Product Requirements Document
+# Product Requirements Document
 
 ## Overview
 

@@ -20,8 +20,8 @@ export const statusCommand = new Command('status')
         for (const entry of entries) {
           const fullPath = path.join(dir, entry.name);
           if (entry.isDirectory()) {
-            if (entry.name.startsWith('.') || ['.git', '.obsidian', '.note-taker', '.trash'].includes(entry.name)) {
-              // Skip hidden dirs and .note-taker
+            if (entry.name.startsWith('.') || ['.git', '.obsidian', '.app-data', '.trash'].includes(entry.name)) {
+              // Skip hidden dirs and .app-data
               continue;
             }
             walk(fullPath);

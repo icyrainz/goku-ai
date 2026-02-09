@@ -1,5 +1,5 @@
-# Note Taker local configuration file
-# Place this file as 'note-taker.config.toml' in your project root
+# Local configuration file
+# Place this file as 'app.config.toml' in your project root
 
 [vault]
 path = ".vault/vault-main"

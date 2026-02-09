@@ -44,7 +44,7 @@ export function loadConfig(): Config {
     },
   };
 
-  const configPath = join(homedir(), '.config', 'note-taker', 'config.toml');
+  const configPath = join(homedir(), '.config', 'my-app', 'config.toml');
   let fileConfig: any = {};
 
   try {

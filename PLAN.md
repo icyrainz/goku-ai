@@ -1,4 +1,4 @@
-# Note-Taker: Implementation Plan
+# Implementation Plan
 
 Each task is self-contained. Prerequisites list which tasks must be complete before starting. Every task specifies exact files, function signatures, and code patterns. No judgment calls required.
 

@@ -1,0 +1,22 @@
+# Local configuration file
+# Place this file as 'app.config.toml' in your project root
+# It takes precedence over the global config at ~/.config/my-app/config.toml
+
+[vault]
+# Path to your notes directory (supports ~ for home directory)
+path = ".vault/vault-main"
+
+[llm]
+# Base URL for the LLM API (OpenAI-compatible)
+# Default: llama-server on akio-fractal
+base_url = "http://akio-fractal:8080/v1"
+model = "GLM-4.7-Flash"
+# API key (leave empty for local LLMs)
+api_key = ""
+
+# Optional: different models for different tasks
+[llm.extraction]
+model = "GLM-4.7-Flash"
+
+[llm.ask]
+model = "GLM-4.7-Flash"

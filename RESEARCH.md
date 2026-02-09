@@ -1,4 +1,4 @@
-# Note-Taker: Research & Market Analysis
+# Research & Market Analysis
 
 ## Vision
 
