@@ -2,9 +2,9 @@
 
 ## Overview
 
-A CLI-first personal knowledge graph that works like a smart file system. You have a vault directory full of files — markdown notes, CSVs, JSON exports, images, whatever. The system scans them, uses a local LLM to extract entities and relationships, and builds a navigable knowledge graph on top. The files are the source of truth. The graph is a derived index.
+A CLI-first personal knowledge graph that works like a smart file system. You have a vault directory full of files — markdown notes, CSVs, JSON exports, images, whatever. The system scans them, uses a local LLM to extract entities and relationships, and builds a navigable knowledge graph on top. **Files are the only source of truth.** The SQLite database is a pure derived index — metadata, entities, and relationships only. No content is stored in the database.
 
-You can also jot quick daily entries via the CLI that live in the database directly — no file overhead for "paid $150 for utilities". Both files and entries feed into the same graph.
+You can jot quick notes via the CLI (`note quick`) which creates a markdown file in your vault, or open today's daily note (`note daily`) to append thoughts. Everything flows through files.
 
 **Prototype scope**: CLI tool with `$EDITOR` input, vault scanning, LLM-powered entity extraction, SQLite graph index, and numbered-reference entity browsing.
 
@@ -29,11 +29,11 @@ The insight: an LLM can extract entities and relationships from natural language
 
 2. **As a user, I can scan my vault** by running `note scan`, which discovers all files, detects types, and queues new/changed files for processing.
 
-3. **As a user, I can add quick daily entries** by running `note add`, which opens `$EDITOR`. These are lightweight entries stored in the database — no file created for "paid $150 for utilities".
+3. **As a user, I can capture quick notes** by running `note quick`, which opens `$EDITOR` and saves the result as a markdown file in `vault/quick/`. For daily journaling, `note daily` opens today's daily note file. All notes are files in the vault — the database only stores metadata.
 
-4. **As a user, files and entries are processed the same way** — a configurable LLM (any OpenAI-compatible endpoint) extracts entities and relationships from both.
+4. **As a user, all files are processed the same way** — a configurable LLM (any OpenAI-compatible endpoint) extracts entities and relationships from every file in the vault.
 
-5. **As a user, I can batch-process everything** by running `note process`, which runs extraction on all unprocessed files and entries with progress output.
+5. **As a user, I can batch-process everything** by running `note process`, which runs extraction on all unprocessed files with progress output.
 
 6. **As a user, I can browse an entity** by running `note entity <name-or-id>`, which shows the entity's details and a numbered list of related entities/sources I can navigate to.
 
@@ -47,9 +47,9 @@ The insight: an LLM can extract entities and relationships from natural language
 
 ### P1 — Important but can wait
 
-11. **As a user, I can view today's entries** with `note today` and see all entries with their extracted entities highlighted.
+11. **As a user, I can view today's notes** with `note today` and see all notes for the day with their extracted entities highlighted.
 
-12. **As a user, I can view a timeline** with `note log` showing recent entries chronologically.
+12. **As a user, I can view a timeline** with `note log` showing recent notes chronologically.
 
 13. **As a user, I can manually link entities** with `note link <entity-a> <entity-b> --type <relationship>` when the AI misses a connection.
 
@@ -59,9 +59,9 @@ The insight: an LLM can extract entities and relationships from natural language
 
 ### P2 — Nice to have
 
-16. **As a user, I can pipe input** via `echo "..." | note add` for scriptable capture.
+16. **As a user, I can pipe input** via `echo "..." | note quick` for scriptable capture (creates a file in the vault).
 
-17. **As a user, I can add inline** via `note add "quick thought"` without opening an editor.
+17. **As a user, I can add inline** via `note quick "quick thought"` without opening an editor (creates a file in the vault).
 
 18. **As a user, I can view entity statistics** — most connected, recent, orphaned entities.
 
@@ -103,9 +103,9 @@ The insight: an LLM can extract entities and relationships from natural language
 │              SQLite Graph Index (derived, rebuildable)     │
 │                                                            │
 │  documents ──── document_entities ──── entities            │
-│  (file refs      (which doc              (people,          │
-│   + quick         mentions                places,          │
-│   entries)        which entity)           amounts...)      │
+│  (file metadata   (which doc              (people,          │
+│   & processing    mentions                places,          │
+│   state)          which entity)           amounts...)      │
 │                                                            │
 │                   relationships                            │
 │                  (entity ↔ entity)                         │
@@ -114,7 +114,7 @@ The insight: an LLM can extract entities and relationships from natural language
 └──────────────────────────────────────────────────────────┘
 ```
 
-**Key principle**: The vault files are the source of truth. The SQLite database is a derived index — you could delete it and rebuild the entire graph by re-scanning and re-processing the vault. Quick daily entries (via `note add`) are the one exception: they live in the database since they don't warrant individual files.
+**Key principle**: The vault files are the sole source of truth. The SQLite database is a pure derived index — it stores only metadata (file paths, hashes, processing state), extracted text cache, entities, and relationships. No raw content lives in the database. You could delete the DB and rebuild the entire graph by re-scanning and re-processing the vault. There are no exceptions to this rule.
 
 ### LLM Integration
 
@@ -146,7 +146,7 @@ The LLM is used for three distinct tasks, each with its own system prompt:
 
    Deduplicate and take the top 10 entities. If keyword extraction fails or returns nothing, fall back to searching the raw question string.
 
-   **Phase 2 — Answer Generation**: For each retrieved entity, gather context: aliases, 1-hop related entities, and document excerpts (using `COALESCE(content, extracted_text)` since file documents store text in `extracted_text`, not `content`). Send the assembled context + question to the LLM (ask model) to generate an answer with entity references.
+   **Phase 2 — Answer Generation**: For each retrieved entity, gather context: aliases, 1-hop related entities, and document excerpts (from `extracted_text`). Send the assembled context + question to the LLM (ask model) to generate an answer with entity references.
 
 **Configuration** (`~/.config/goku-ai/config.toml`):
 ```toml
@@ -167,23 +167,15 @@ model = ""  # override model for question answering (optional)
 
 ### Data Model
 
-SQLite via `better-sqlite3`. This is a **graph index over your files**, not a content store.
+SQLite via `better-sqlite3`. This is a **graph index over your files**, not a content store. The database holds only file metadata and the derived knowledge graph. All raw content lives on disk in the vault.
 
 ```sql
--- Documents: references to vault files + inline quick entries
+-- Documents: metadata registry for vault files (content lives on disk, not here)
 CREATE TABLE documents (
   id          TEXT PRIMARY KEY,     -- nanoid
-  kind        TEXT NOT NULL,        -- 'file' or 'entry'
-
-  -- For kind='file': pointer to vault file (content lives on disk)
-  file_path   TEXT UNIQUE,          -- Relative to vault root: 'daily/2024-01-15.md'
+  file_path   TEXT UNIQUE NOT NULL, -- Relative to vault root: 'daily/2024-01-15.md'
   file_hash   TEXT,                 -- Content hash for change detection (e.g. xxhash)
   file_type   TEXT,                 -- Detected type: 'markdown', 'csv', 'json', 'image', etc.
-
-  -- For kind='entry': content lives here (quick daily notes)
-  content     TEXT,                 -- Only populated for kind='entry'
-
-  -- Shared fields
   title       TEXT,                 -- From filename, frontmatter, or first line
   date        TEXT,                 -- ISO date: '2024-01-15'
   metadata    TEXT,                 -- JSON: { frontmatter: {}, tags: [], ... }
@@ -224,7 +216,7 @@ CREATE TABLE document_entities (
   PRIMARY KEY (document_id, entity_id)
 );
 
--- Full-text search on extracted text + quick entries
+-- Full-text search on document titles and extracted text
 CREATE VIRTUAL TABLE documents_fts USING fts5(
   title, extracted_text,
   content=documents,
@@ -239,7 +231,6 @@ CREATE VIRTUAL TABLE entities_fts USING fts5(
 );
 
 -- Indexes
-CREATE INDEX idx_documents_kind ON documents(kind);
 CREATE INDEX idx_documents_file_path ON documents(file_path);
 CREATE INDEX idx_documents_processed ON documents(processed);
 CREATE INDEX idx_documents_date ON documents(date);
@@ -252,12 +243,11 @@ CREATE INDEX idx_document_entities_entity ON document_entities(entity_id);
 ```
 
 **Design rationale:**
-- `documents` table is a **registry**, not a content store. For files, content lives on disk. The DB just tracks what's been scanned and processed.
-- `kind='file'` vs `kind='entry'` — files reference the vault, entries store content inline. Both produce entities the same way.
+- `documents` table is a **metadata registry**, not a content store. All content lives on disk in the vault. The DB tracks what's been scanned, processing state, and caches extracted text.
 - `file_hash` enables change detection: `note scan` compares hashes to find modified files and requeues them.
-- `extracted_text` caches the content extractor output so we don't re-parse files on every query (e.g. CSV parsing, frontmatter stripping).
+- `extracted_text` caches the content extractor output so we don't re-parse files on every query (e.g. CSV parsing, frontmatter stripping). This is derived data, not source content.
 - `file_path` is relative to vault root — vault can be moved without breaking the index.
-- The entire graph (entities, relationships, document_entities) is derived and rebuildable: `note rebuild` could nuke the graph and reprocess everything from files + entries.
+- The entire database is derived and rebuildable: `note rebuild` nukes the graph and reprocesses everything from vault files.
 - Text PKs (nanoid) for future CR-SQLite compatibility.
 
 ---
@@ -268,7 +258,8 @@ CREATE INDEX idx_document_entities_entity ON document_entities(entity_id);
 
 ```
 note init [path]                  Initialize a vault (default: ~/notes)
-note add                          Open $EDITOR for a quick daily entry (stored in DB)
+note daily [date]                 Open today's daily note in $EDITOR (creates vault/daily/YYYY-MM-DD.md)
+note quick                        Open $EDITOR for a one-off note (creates file in vault/quick/)
 note scan                         Scan vault for new/changed files, queue for processing
 note process [--concurrency N]    Run LLM extraction on all pending documents
 note process --relink             Reprocess all docs with current entity knowledge (retroactive linking)
@@ -278,11 +269,11 @@ note ask "<question>"             Ask a question answered from the knowledge gra
 note import google-keep <path>    Convert Google Keep export into vault markdown files
 note status                       Show vault/processing/graph stats
 note rebuild                      Nuke the graph index and reprocess everything from scratch
-note today                        Show today's entries with extracted entities (P1)
-note log [--days N]               Show recent entries chronologically (P1)
+note today                        Show today's notes with extracted entities (P1)
+note log [--days N]               Show recent notes chronologically (P1)
 note link <a> <b> [--type T]      Manually create a relationship (P1)
 note merge <a> <b>                Merge duplicate entities (P1)
-note add "quick note"             Add inline entry (P2)
+note quick "quick note"           Create note without opening editor (P2)
 note config                       Show current configuration (P2)
 ```
 
@@ -304,7 +295,7 @@ Related Entities:
 Found In:
   [4] daily/2024-01-15.md: "Paid $150 for utility bill for the house on 123 Main St"
   [5] daily/2024-01-10.md: "John Doe moved into 123 Main St"
-  [6] (entry) 2024-01-03: "Renewed home insurance for Main St property"
+  [6] quick/2024-01-03-home-insurance.md: "Renewed home insurance for Main St property"
 
 Navigate: enter number, or (s)earch, (b)ack, (q)uit
 > _
@@ -402,7 +393,6 @@ Future importers (Apple Notes, Notion export, etc.) follow the same pattern: con
 $ note status
 
 Vault:       ~/notes (1,203 files)
-Entries:     23 quick entries
 
 Processing:
   ✓ Processed:  234
@@ -424,7 +414,7 @@ Graph:
 note process [--concurrency N]
 ```
 
-This is the core of the system. It takes unprocessed documents (files + entries), extracts text, runs the LLM, and builds the graph index.
+This is the core of the system. It takes unprocessed documents (vault files), extracts text, runs the LLM, and builds the graph index.
 
 ### Flow
 
@@ -507,7 +497,7 @@ note rebuild
 
 - Deletes all entities, relationships, and document_entities
 - Resets all documents to `processed=0`
-- Equivalent to: starting fresh with the same vault
+- Equivalent to: starting fresh with the same vault files
 - Use when: extraction prompts improved, switched LLM models, graph is messy
 - Free to run since everything is local — no cloud token costs. Swap to a better model, rebuild, compare results.
 
@@ -560,7 +550,8 @@ goku-ai/
 ├── src/
 │   ├── cli/                # Command handlers
 │   │   ├── init.ts
-│   │   ├── add.ts
+│   │   ├── daily.ts
+│   │   ├── quick.ts
 │   │   ├── scan.ts
 │   │   ├── process.ts
 │   │   ├── entity.ts
@@ -571,7 +562,7 @@ goku-ai/
 │   │   └── index.ts        # CLI entry point, command registration
 │   ├── core/
 │   │   ├── db.ts            # SQLite setup, migrations, queries
-│   │   ├── documents.ts     # Document registry (files + entries)
+│   │   ├── documents.ts     # Document metadata registry (file references only)
 │   │   ├── entities.ts      # Entity CRUD, dedup, graph traversal
 │   │   └── relationships.ts
 │   ├── scanner/
@@ -602,13 +593,13 @@ The prototype is successful when:
 1. I can point it at my Obsidian vault (or any folder of files) and `note scan` indexes everything
 2. I can convert my Google Keep export into vault files with `note import google-keep`
 3. I can run `note process` and watch it extract entities from hundreds of files via a local LLM
-4. I can run `note add`, write a quick entry, and see extracted entities
+4. I can run `note quick`, write a note (saved as a file in the vault), and see extracted entities after processing
 5. I can run `note entity "123 Main St"` and see all related entities and source files
 6. I can run `note search "John"` and find entities/documents fuzzy-matched
 7. I can run `note ask "how much did I spend on the house?"` and get a coherent answer from the graph
 8. Entities are deduplicated reasonably ("123 Main St" and "the house on Main St" should merge)
 9. `note process --relink` retroactively connects old documents to newly-discovered entities
-10. My files stay as files — the SQLite DB is a derived index I could delete and rebuild
+10. Everything is files — the SQLite DB stores only metadata and the derived graph index, which I could delete and rebuild entirely from the vault
 11. The LLM endpoint is configurable — works with Ollama, llama.cpp, or any OpenAI-compatible API
 
 ---
