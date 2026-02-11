@@ -1,12 +1,12 @@
-# Product Requirements Document
+# Product Requirements Document (PRD)
 
 ## Overview
 
-A CLI-first personal knowledge graph that works like a smart file system. You have a vault directory full of files — markdown notes, CSVs, JSON exports, images, whatever. The system scans them, uses a local LLM to extract entities and relationships, and builds a navigable knowledge graph on top. **Files are the only source of truth.** The SQLite database is a pure derived index — metadata, entities, and relationships only. No content is stored in the database.
+A CLI-first personal knowledge graph that works like a smart file system. You have a vault directory full of files — markdown notes, CSVs, JSON exports, images, whatever. The system scans them, uses a local LLM to extract entities and relationships, and builds a navigable knowledge graph on top.
 
-You can jot quick notes via the CLI (`note quick`) which creates a markdown file in your vault, or open today's daily note (`note daily`) to append thoughts. Everything flows through files.
+**Core Principle**: Files are the only source of truth. The SQLite database is a pure derived index — metadata, entities, and relationships only. No content is stored in the database.
 
-**Prototype scope**: CLI tool with `$EDITOR` input, vault scanning, LLM-powered entity extraction, SQLite graph index, and numbered-reference entity browsing.
+**Prototype Scope**: CLI tool with `$EDITOR` input, vault scanning, LLM-powered entity extraction, SQLite graph index, and numbered-reference entity browsing.
 
 ---
 
@@ -23,232 +23,90 @@ The insight: an LLM can extract entities and relationships from natural language
 
 ## User Stories
 
-### P0 — Must have for prototype
+### P0 — Must Have
 
-1. **As a user, I have a vault directory** (e.g. `~/notes`) that holds my files. I can symlink my Obsidian vault here, dump Google Keep exports into it, or just drop files in. The system doesn't care how files got there.
+1. **As a user, I have a vault directory** that holds my files. I can symlink my Obsidian vault, dump Google Keep exports, or just drop files in.
 
-2. **As a user, I can scan my vault** by running `note scan`, which discovers all files, detects types, and queues new/changed files for processing.
+2. **As a user, I can scan my vault** by running `note scan`, which discovers files, detects types, and queues new/changed files.
 
-3. **As a user, I can capture quick notes** by running `note quick`, which opens `$EDITOR` and saves the result as a markdown file in `vault/quick/`. For daily journaling, `note daily` opens today's daily note file. All notes are files in the vault — the database only stores metadata.
+3. **As a user, I can capture quick notes** by running `note quick` (opens `$EDITOR`) or `note daily` (today's date file). All notes are files in the vault.
 
-4. **As a user, all files are processed the same way** — a configurable LLM (any OpenAI-compatible endpoint) extracts entities and relationships from every file in the vault.
+4. **As a user, I can batch-process files** by running `note process`, which extracts entities and relationships via LLM.
 
-5. **As a user, I can batch-process everything** by running `note process`, which runs extraction on all unprocessed files with progress output.
+5. **As a user, I can browse entities** by running `note entity <name>`, showing related entities and source documents.
 
-6. **As a user, I can browse an entity** by running `note entity <name-or-id>`, which shows the entity's details and a numbered list of related entities/sources I can navigate to.
+6. **As a user, I can search** by running `note search <query>` for fuzzy matching across entities and documents.
 
-7. **As a user, I can fuzzy search entities** by running `note search <query>`, which shows matching entities with context.
+7. **As a user, I can ask questions** by running `note ask "how much did I spend on Main St?"` using the knowledge graph.
 
-8. **As a user, I can ask a question** by running `note ask "how much did I spend on Main St?"`, which uses the LLM + knowledge graph to answer with referenced entities.
+8. **As a user, I can configure the LLM** via config file with `base_url`, `model`, and `api_key`. Default: local Ollama.
 
-9. **As a user, I can configure the LLM endpoint** via a config file with `base_url`, `model`, and `api_key`. Default: `http://localhost:11434/v1` (Ollama).
+9. **As a user, I can import external formats** by running `note import google-keep <path>` to convert to vault files.
 
-10. **As a user, I can convert external formats into vault files** by running `note import google-keep <path>`, which converts Google Keep JSON into markdown files inside my vault.
+10. **As a user, I can retroactively improve the graph** by running `note process --relink` to reconnect old documents with new entity knowledge.
 
-### P1 — Important but can wait
+### P1 — Important
 
-11. **As a user, I can view today's notes** with `note today` and see all notes for the day with their extracted entities highlighted.
+11. **As a user, I can view today's notes** with `note today` and see extracted entities.
 
 12. **As a user, I can view a timeline** with `note log` showing recent notes chronologically.
 
-13. **As a user, I can manually link entities** with `note link <entity-a> <entity-b> --type <relationship>` when the AI misses a connection.
+13. **As a user, I can manually link entities** with `note link <a> <b> --type <relationship>`.
 
-14. **As a user, I can merge duplicate entities** with `note merge <entity-a> <entity-b>` when the AI creates duplicates.
+14. **As a user, I can merge duplicates** with `note merge <entity-a> <entity-b>`.
 
-15. **As a user, the system handles non-text files** — images via multimodal LLM descriptions, CSVs parsed as structured data, PDFs via text extraction.
+15. **As a user, the system handles non-text files** — images via multimodal LLM, CSVs as structured data, PDFs via text extraction.
 
-### P2 — Nice to have
+16. **As a user, I can use multi-pass processing** for better accuracy on long documents and ambiguous references.
 
-16. **As a user, I can pipe input** via `echo "..." | note quick` for scriptable capture (creates a file in the vault).
+17. **As a user, I can run smart relinking** with `note process --relink --smart` to only reprocess affected documents.
 
-17. **As a user, I can add inline** via `note quick "quick thought"` without opening an editor (creates a file in the vault).
+18. **As a user, I can review suggested merges** with `note merge --review`.
 
-18. **As a user, I can view entity statistics** — most connected, recent, orphaned entities.
+19. **As a user, I can debug extractions** with `note debug <document> --entity <name>`.
 
-19. **As a user, I can watch the vault** for file changes and auto-queue new/modified files for processing.
+20. **As a user, I can view insights** with `note insights` to see graph improvements over time.
+
+### P2 — Nice to Have
+
+21. **As a user, I can pipe input** via `echo "..." | note quick`.
+
+22. **As a user, I can add inline notes** via `note quick "quick thought"`.
+
+23. **As a user, I can view entity statistics** — most connected, recent, orphaned.
+
+24. **As a user, I can watch the vault** for auto-scanning file changes.
+
+25. **As a user, I can split conflated entities** with `note split <entity>`.
+
+26. **As a user, I can retype entities** with `note retype <entity> <type>`.
 
 ---
 
 ## Architecture
 
-### Core Concept: Files + Graph Index
+### High-Level Flow
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    Vault Directory (~/notes)               │
-│                                                            │
-│  daily/2024-01-15.md    properties/123-main-st.md         │
-│  receipts/jan.csv       photos/house.jpg                  │
-│  keep-export/note1.md   projects/kitchen-reno.md          │
-│  (anything — just files on disk)                          │
-└──────────────────────────┬───────────────────────────────┘
-                           │
-                     note scan (detect new/changed files)
-                           │
-┌──────────────────────────▼───────────────────────────────┐
-│                Content Extractors                         │
-│  .md → passthrough     .csv → rows as text               │
-│  .json → structured    .jpg/.png → multimodal LLM (P1)   │
-│  .txt → passthrough    .pdf → text extraction (P1)       │
-└──────────────────────────┬───────────────────────────────┘
-                           │
-                     extracted text
-                           │
-┌──────────────────────────▼───────────────────────────────┐
-│              LLM (OpenAI-compatible endpoint)              │
-│        Entity extraction → Relationship extraction         │
-└──────────────────────────┬───────────────────────────────┘
-                           │
-┌──────────────────────────▼───────────────────────────────┐
-│              SQLite Graph Index (derived, rebuildable)     │
-│                                                            │
-│  documents ──── document_entities ──── entities            │
-│  (file metadata   (which doc              (people,          │
-│   & processing    mentions                places,          │
-│   state)          which entity)           amounts...)      │
-│                                                            │
-│                   relationships                            │
-│                  (entity ↔ entity)                         │
-│                                                            │
-│  FTS5 indexes for full-text search                        │
-└──────────────────────────────────────────────────────────┘
+Vault Files (~/notes)
+       ↓
+note scan (detect changes)
+       ↓
+Content Extractors (.md, .csv, .json, .txt)
+       ↓
+LLM Processing (entity + relationship extraction)
+       ↓
+SQLite Graph Index (entities, relationships, document links)
 ```
 
-**Key principle**: The vault files are the sole source of truth. The SQLite database is a pure derived index — it stores only metadata (file paths, hashes, processing state), extracted text cache, entities, and relationships. No raw content lives in the database. You could delete the DB and rebuild the entire graph by re-scanning and re-processing the vault. There are no exceptions to this rule.
+**Key Principle**: Files are the source of truth. The database is derived and rebuildable.
 
-### LLM Integration
+### Core Components
 
-The LLM is used for three distinct tasks, each with its own system prompt:
-
-1. **Entity Extraction** — Given document text, extract structured entities:
-   ```
-   Input: "Paid $150 for utility bill for the house on 123 Main St"
-   Output: [
-     { "name": "123 Main St", "type": "property", "mentions": ["the house on 123 Main St"] },
-     { "name": "Utility Bill", "type": "bill", "mentions": ["utility bill"] },
-     { "name": "$150", "type": "expense", "mentions": ["$150"] }
-   ]
-   ```
-
-2. **Relationship Extraction** — Given entities in context, extract relationships:
-   ```
-   Output: [
-     { "source": "$150", "target": "Utility Bill", "type": "payment_for" },
-     { "source": "Utility Bill", "target": "123 Main St", "type": "bill_for" }
-   ]
-   ```
-
-3. **Question Answering** — Two-phase retrieval-then-answer:
-
-   **Phase 1 — Context Retrieval**: Use the LLM (extraction model) to extract search keywords from the natural language question — nouns, proper nouns, and named entities only (no verbs or stop words). Search each keyword against:
-   - `entities_fts` (entity names + aliases)
-   - `documents_fts` (document titles + extracted text), surfacing entities linked to matching documents via `document_entities`
-
-   Deduplicate and take the top 10 entities. If keyword extraction fails or returns nothing, fall back to searching the raw question string.
-
-   **Phase 2 — Answer Generation**: For each retrieved entity, gather context: aliases, 1-hop related entities, and document excerpts (from `extracted_text`). Send the assembled context + question to the LLM (ask model) to generate an answer with entity references.
-
-**Configuration** (`~/.config/goku-ai/config.toml`):
-```toml
-[vault]
-path = "~/notes"  # vault directory
-
-[llm]
-base_url = "http://localhost:11434/v1"  # Ollama default
-model = "mistral"                        # or any model name
-api_key = ""                             # optional, for hosted APIs
-
-[llm.extraction]
-model = ""  # override model for extraction (optional, falls back to llm.model)
-
-[llm.ask]
-model = ""  # override model for question answering (optional)
-```
-
-### Data Model
-
-SQLite via `better-sqlite3`. This is a **graph index over your files**, not a content store. The database holds only file metadata and the derived knowledge graph. All raw content lives on disk in the vault.
-
-```sql
--- Documents: metadata registry for vault files (content lives on disk, not here)
-CREATE TABLE documents (
-  id          TEXT PRIMARY KEY,     -- nanoid
-  file_path   TEXT UNIQUE NOT NULL, -- Relative to vault root: 'daily/2024-01-15.md'
-  file_hash   TEXT,                 -- Content hash for change detection (e.g. xxhash)
-  file_type   TEXT,                 -- Detected type: 'markdown', 'csv', 'json', 'image', etc.
-  title       TEXT,                 -- From filename, frontmatter, or first line
-  date        TEXT,                 -- ISO date: '2024-01-15'
-  metadata    TEXT,                 -- JSON: { frontmatter: {}, tags: [], ... }
-  extracted_text TEXT,              -- Text sent to LLM (from content extractor). Cached to avoid re-extraction.
-  processed   INTEGER DEFAULT 0,   -- 0=pending, 1=processed, 2=error
-  error_msg   TEXT,                 -- Error detail if processed=2
-  created_at  TEXT NOT NULL,
-  updated_at  TEXT NOT NULL
-);
-
--- Entities: extracted people, places, amounts, etc.
-CREATE TABLE entities (
-  id          TEXT PRIMARY KEY,
-  name        TEXT NOT NULL,        -- Display name: "123 Main St"
-  type        TEXT NOT NULL,        -- person, property, expense, bill, organization, location, concept
-  aliases     TEXT,                 -- JSON array of alternate names/mentions
-  metadata    TEXT,                 -- JSON object for type-specific data
-  created_at  TEXT NOT NULL,
-  updated_at  TEXT NOT NULL
-);
-
--- Relationships between entities
-CREATE TABLE relationships (
-  id          TEXT PRIMARY KEY,
-  source_id   TEXT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-  target_id   TEXT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-  type        TEXT NOT NULL,        -- payment_for, lives_at, tenant_of, works_at, etc.
-  properties  TEXT,                 -- JSON for edge metadata (amount, date, etc.)
-  created_at  TEXT NOT NULL
-);
-
--- Links between documents and entities (many-to-many)
-CREATE TABLE document_entities (
-  document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-  entity_id   TEXT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-  mention     TEXT,                 -- The exact text span that matched
-  confidence  REAL DEFAULT 1.0,    -- LLM confidence score
-  PRIMARY KEY (document_id, entity_id)
-);
-
--- Full-text search on document titles and extracted text
-CREATE VIRTUAL TABLE documents_fts USING fts5(
-  title, extracted_text,
-  content=documents,
-  content_rowid=rowid
-);
-
--- Full-text search on entities
-CREATE VIRTUAL TABLE entities_fts USING fts5(
-  name, aliases,
-  content=entities,
-  content_rowid=rowid
-);
-
--- Indexes
-CREATE INDEX idx_documents_file_path ON documents(file_path);
-CREATE INDEX idx_documents_processed ON documents(processed);
-CREATE INDEX idx_documents_date ON documents(date);
-CREATE INDEX idx_entities_type ON entities(type);
-CREATE INDEX idx_entities_name ON entities(name);
-CREATE INDEX idx_relationships_source ON relationships(source_id);
-CREATE INDEX idx_relationships_target ON relationships(target_id);
-CREATE INDEX idx_document_entities_doc ON document_entities(document_id);
-CREATE INDEX idx_document_entities_entity ON document_entities(entity_id);
-```
-
-**Design rationale:**
-- `documents` table is a **metadata registry**, not a content store. All content lives on disk in the vault. The DB tracks what's been scanned, processing state, and caches extracted text.
-- `file_hash` enables change detection: `note scan` compares hashes to find modified files and requeues them.
-- `extracted_text` caches the content extractor output so we don't re-parse files on every query (e.g. CSV parsing, frontmatter stripping). This is derived data, not source content.
-- `file_path` is relative to vault root — vault can be moved without breaking the index.
-- The entire database is derived and rebuildable: `note rebuild` nukes the graph and reprocesses everything from vault files.
-- Text PKs (nanoid) for future CR-SQLite compatibility.
+- **Documents**: File metadata registry (path, hash, processing state)
+- **Entities**: People, places, amounts, etc. extracted from text
+- **Relationships**: Connections between entities (payment_for, lives_at, etc.)
+- **Document-Entity Links**: Which documents mention which entities
 
 ---
 
@@ -257,350 +115,63 @@ CREATE INDEX idx_document_entities_entity ON document_entities(entity_id);
 ### Commands
 
 ```
-note init [path]                  Initialize a vault (default: ~/notes)
-note daily [date]                 Open today's daily note in $EDITOR (creates vault/daily/YYYY-MM-DD.md)
-note quick                        Open $EDITOR for a one-off note (creates file in vault/quick/)
-note scan                         Scan vault for new/changed files, queue for processing
-note process [--concurrency N]    Run LLM extraction on all pending documents
-note process --relink             Reprocess all docs with current entity knowledge (retroactive linking)
-note entity <name-or-id>          Browse an entity and its connections
+note init [path]                  Initialize vault (default: ~/notes)
+note daily [date]                 Open today's note in $EDITOR
+note quick ["text"]               Quick note (opens editor or saves inline)
+note scan                         Scan vault for new/changed files
+note process                      Process pending documents
+note process --relink             Reprocess all documents
+note process --relink --smart     Smart relink (targeted reprocessing)
+note entity <name>                Browse entity connections
 note search <query>               Fuzzy search entities and documents
-note ask "<question>"             Ask a question answered from the knowledge graph
-note import google-keep <path>    Convert Google Keep export into vault markdown files
-note status                       Show vault/processing/graph stats
-note rebuild                      Nuke the graph index and reprocess everything from scratch
-note today                        Show today's notes with extracted entities (P1)
-note log [--days N]               Show recent notes chronologically (P1)
-note link <a> <b> [--type T]      Manually create a relationship (P1)
-note merge <a> <b>                Merge duplicate entities (P1)
-note quick "quick note"           Create note without opening editor (P2)
-note config                       Show current configuration (P2)
-```
-
-### Output Format — Entity Browsing
-
-When viewing an entity, show a numbered reference list for navigation:
-
-```
-$ note entity "123 Main St"
-
-🏠 123 Main St (property)
-━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Related Entities:
-  [1] Utility Bill (bill) ── payment_for ── $150
-  [2] John Doe (person) ── tenant_of
-  [3] Home Insurance (bill) ── policy_for
-
-Found In:
-  [4] daily/2024-01-15.md: "Paid $150 for utility bill for the house on 123 Main St"
-  [5] daily/2024-01-10.md: "John Doe moved into 123 Main St"
-  [6] quick/2024-01-03-home-insurance.md: "Renewed home insurance for Main St property"
-
-Navigate: enter number, or (s)earch, (b)ack, (q)uit
-> _
-```
-
-This creates a REPL-like navigation loop where you can follow connections through the graph.
-
-### Output Format — Search
-
-```
-$ note search "Main"
-
-Entities:
-  [1] 123 Main St (property) — 6 connections, 3 documents
-  [2] Main Street Deli (organization) — 2 connections, 1 document
-
-Documents:
-  [3] daily/2024-01-15.md: "Paid $150 for utility bill for the house on 123 Main St"
-  [4] daily/2024-01-10.md: "John Doe moved into 123 Main St"
-
-Navigate: enter number, or (q)uit
-> _
-```
-
-### Output Format — Ask
-
-```
-$ note ask "how much have I spent on the house?"
-
-Based on your notes, you've spent $150 on 123 Main St:
-
-  • $150 — Utility Bill (2024-01-15) [1]
-
-Referenced entities:
-  [1] 123 Main St (property)
-  [2] Utility Bill (bill)
-
-Navigate: enter number, or (q)uit
-> _
+note ask "<question>"             Ask question using knowledge graph
+note import google-keep <path>    Import Google Keep export
+note status                       Show vault/graph stats
+note rebuild                      Nuke index and rebuild from scratch
+note link <a> <b> [--type T]      Create manual relationship (P1)
+note merge <a> [b]                Merge entities or review suggestions (P1)
+note split <entity>               Split conflated entity (P1)
+note retype <entity> <type>       Reclassify entity type (P1)
+note debug <document>             Debug extraction (P1)
+note insights                     View graph insights (P1)
+note today                        View today's notes (P1)
+note log [--days N]               View timeline (P1)
+note config                       Show configuration (P2)
 ```
 
 ---
 
-## Vault Scanning & Import
-
-### `note scan` — Discover files in the vault
-
-```
-note scan
-```
-
-- Recursively walks the vault directory
-- For each file:
-  - Computes content hash (xxhash — fast, good enough)
-  - Checks `documents` table by `file_path`
-  - **New file**: insert with `processed=0`
-  - **Changed file** (hash differs): update hash, reset `processed=0`, clear old entity links
-  - **Unchanged file**: skip
-  - **Deleted file** (in DB but not on disk): mark as removed, clean up entity links
-- Skips hidden directories (`.obsidian/`, `.git/`, etc.)
-- Shows progress:
-  ```
-  Scanning vault... 1,203 files found
-  ✓ 847 unchanged, 312 new, 44 modified
-  Run `note process` to extract entities from 356 pending documents
-  ```
-
-**Obsidian compatibility**: If your vault IS an Obsidian vault (or symlinked), `note scan` just works. No special import needed. `[[wiki-links]]` in content become entity hints during extraction.
-
-### `note import` — Convert external formats into vault files
-
-Import doesn't load data into the database — it converts external formats into files in your vault. Then `note scan` + `note process` handle the rest.
-
-```
-note import google-keep /path/to/Takeout/Keep
-```
-
-- Reads `.json` files from Google Takeout
-- Converts each to a markdown file in `vault/keep/` subdirectory
-- Maps Keep fields:
-  - `textContent` or `listContent` → markdown body (lists as `- [ ]` checklists)
-  - `title` → YAML frontmatter `title` + filename
-  - `createdTimestampUsec` → frontmatter `date`
-  - `labels[].name` → frontmatter `tags`
-  - `annotations` (URLs) → appended to body
-  - Skips trashed notes
-- Idempotent: won't overwrite existing files (checks by filename)
-- After conversion: "Created 333 files in vault/keep/. Run `note scan` to index them."
-
-Future importers (Apple Notes, Notion export, etc.) follow the same pattern: convert to files, drop into vault.
-
-### `note status`
-
-```
-$ note status
-
-Vault:       ~/notes (1,203 files)
-
-Processing:
-  ✓ Processed:  234
-  ⏳ Pending:    961
-  ✗ Errored:      8
-
-Graph:
-  Entities:      412 (person: 45, property: 12, expense: 89, bill: 34, ...)
-  Relationships: 287
-```
-
----
-
-## Processing Pipeline
-
-### `note process` — Extract entities from pending documents
-
-```
-note process [--concurrency N]
-```
-
-This is the core of the system. It takes unprocessed documents (vault files), extracts text, runs the LLM, and builds the graph index.
-
-### Flow
-
-```
-document (processed=0)
-       │
-       ▼
-Content Extractor (file type → text)
-  .md  → strip frontmatter, passthrough body
-  .csv → format rows as readable text
-  .json → flatten to key-value descriptions
-  .txt  → passthrough
-  .jpg/.png → multimodal LLM describe (P1)
-  .pdf  → text extraction (P1)
-       │
-       ▼
-extracted_text stored in documents table (cached)
-       │
-       ▼
-LLM: entity extraction prompt
-(text + existing entity list for dedup hints)
-       │
-       ▼
-For each extracted entity:
-  ├─ Fuzzy match against existing entities (name + aliases)
-  ├─ If match found (score > threshold): link to existing
-  ├─ If no match: create new entity
-  └─ Insert into document_entities with mention text
-       │
-       ▼
-LLM: relationship extraction prompt
-(text + extracted entities as context)
-       │
-       ▼
-For each relationship:
-  └─ Upsert into relationships (deduplicate by source+target+type)
-       │
-       ▼
-Mark document processed=1
-```
-
-### Progress output
-
-```
-Processing... [234/1,203] 19% ── ETA: ~12 min
-✓ daily/2024-01-15.md → 3 entities, 2 relationships
-✓ keep/grocery-list.md → 1 entity, 0 relationships
-✗ keep/untitled.md → error: empty content (skipped)
-```
-
-- On error: marks `processed=2` with `error_msg`, continues to next
-- Resumable: re-running picks up where it left off (only `processed=0`)
-- Concurrency default: 1 (local LLMs are typically single-threaded)
-
-### Retroactive Relinking (`note process --relink`)
-
-Over time, new entities emerge that should connect to older documents. Example: you mention "John" casually in January. In June you write "John Doe, tenant at 123 Main St" — now the system has a `John Doe (person)` entity. That January mention should link to it.
-
-```
-note process --relink
-```
-
-- Reprocesses ALL documents (regardless of processed status)
-- Passes the **current full entity list** as context to the LLM, so it can match old mentions to newly-known entities
-- Clears and rebuilds entity links for each document
-- Preserves manually-created links (P1)
-- Expensive (re-runs LLM on everything) but needed periodically as the graph grows
-
-**When to relink:**
-- After a large import (many new entities discovered)
-- When you notice old references that should be connected
-- Periodically as the entity vocabulary grows
-- Anytime — since extraction runs on a local LLM, reprocessing is free. You can iterate as many times as needed to improve the graph without paying per-token cloud costs.
-
-### `note rebuild` — Nuclear option
-
-```
-note rebuild
-```
-
-- Deletes all entities, relationships, and document_entities
-- Resets all documents to `processed=0`
-- Equivalent to: starting fresh with the same vault files
-- Use when: extraction prompts improved, switched LLM models, graph is messy
-- Free to run since everything is local — no cloud token costs. Swap to a better model, rebuild, compare results.
-
-### Entity Types (initial set)
-
-| Type | Examples |
-|------|----------|
-| `person` | John Doe, Dr. Smith, Mom |
-| `property` | 123 Main St, the house, the apartment |
-| `expense` | $150, $2,500/month |
-| `bill` | utility bill, insurance, mortgage |
-| `organization` | Acme Corp, City Water Department |
-| `location` | San Francisco, downtown, the office |
-| `date` | January 15, next Tuesday, Q1 2024 |
-| `concept` | project launch, kitchen renovation |
-
-Users should not need to pre-define types — the LLM infers them. But the system provides this list as guidance in the extraction prompt.
-
-### Deduplication Strategy
-
-Before creating a new entity, check for duplicates:
-
-1. **Exact name match** (case-insensitive)
-2. **Alias match** — check against all existing aliases
-3. **Fuzzy match** — Levenshtein distance or similar on entity names of the same type
-4. **LLM-assisted** (P1) — for ambiguous cases, ask the LLM "are these the same entity?"
-
-For the prototype, start with exact + fuzzy matching. LLM-assisted dedup is P1.
-
----
-
-## Technical Decisions
-
-### Runtime & Dependencies
-
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| Language | TypeScript (Node.js) | Fast iteration, good ecosystem, path to future web UI |
-| Database | better-sqlite3 | Synchronous API (simpler code), fast, native SQLite bindings |
-| CLI framework | Commander.js or yargs | Mature, well-documented |
-| LLM client | OpenAI SDK (`openai` npm package) | Works with any OpenAI-compatible endpoint |
-| Fuzzy search | fuse.js or fzf-like scoring | For entity name matching |
-| Config | cosmiconfig or rc | Standard config file loading |
-| IDs | nanoid or ulid | Sortable, URL-safe, no autoincrement (CR-SQLite compatible) |
-
-### Project Structure
-
-```
-goku-ai/
-├── src/
-│   ├── cli/                # Command handlers
-│   │   ├── init.ts
-│   │   ├── daily.ts
-│   │   ├── quick.ts
-│   │   ├── scan.ts
-│   │   ├── process.ts
-│   │   ├── entity.ts
-│   │   ├── search.ts
-│   │   ├── ask.ts
-│   │   ├── import.ts
-│   │   ├── status.ts
-│   │   └── index.ts        # CLI entry point, command registration
-│   ├── core/
-│   │   ├── db.ts            # SQLite setup, migrations, queries
-│   │   ├── documents.ts     # Document metadata registry (file references only)
-│   │   ├── entities.ts      # Entity CRUD, dedup, graph traversal
-│   │   └── relationships.ts
-│   ├── scanner/
-│   │   ├── scan.ts          # Vault file discovery, hash comparison
-│   │   └── extractors.ts   # Content extractors: .md, .csv, .json, .txt
-│   ├── import/
-│   │   └── google-keep.ts   # Google Keep → markdown file converter
-│   ├── llm/
-│   │   ├── client.ts        # OpenAI-compatible API client
-│   │   ├── extract.ts       # Entity extraction prompts & parsing
-│   │   ├── relate.ts        # Relationship extraction prompts & parsing
-│   │   └── ask.ts           # Question answering with graph context
-│   ├── config.ts            # Config file loading
-│   └── utils.ts
-├── migrations/              # SQL migration files
-├── tests/
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
----
-
-## Success Criteria (Prototype)
+## Success Criteria
 
 The prototype is successful when:
 
-1. I can point it at my Obsidian vault (or any folder of files) and `note scan` indexes everything
-2. I can convert my Google Keep export into vault files with `note import google-keep`
-3. I can run `note process` and watch it extract entities from hundreds of files via a local LLM
-4. I can run `note quick`, write a note (saved as a file in the vault), and see extracted entities after processing
-5. I can run `note entity "123 Main St"` and see all related entities and source files
-6. I can run `note search "John"` and find entities/documents fuzzy-matched
-7. I can run `note ask "how much did I spend on the house?"` and get a coherent answer from the graph
-8. Entities are deduplicated reasonably ("123 Main St" and "the house on Main St" should merge)
-9. `note process --relink` retroactively connects old documents to newly-discovered entities
-10. Everything is files — the SQLite DB stores only metadata and the derived graph index, which I could delete and rebuild entirely from the vault
-11. The LLM endpoint is configurable — works with Ollama, llama.cpp, or any OpenAI-compatible API
+1. **Core Functionality**: I can scan an Obsidian vault, import Google Keep, and extract entities from hundreds of files via local LLM.
+
+2. **Entity Browsing**: `note entity "123 Main St"` shows all related entities and source files with numbered navigation.
+
+3. **Search & Ask**: `note search "John"` and `note ask "how much did I spend?"` work with referenced entities.
+
+4. **Deduplication**: "123 Main St" and "the house on Main St" merge reasonably.
+
+5. **Retroactive Improvement**: `note process --relink` connects old documents to newly-discovered entities.
+
+6. **Files-First**: Everything is files — I can delete the DB and rebuild from vault.
+
+7. **Configurable LLM**: Works with Ollama, llama.cpp, or any OpenAI-compatible API.
+
+8. **Multi-Pass Accuracy**: Resolves ambiguous references (e.g., "John" → correct person based on context).
+
+9. **Long Documents**: Handles documents >4k tokens accurately via chunking.
+
+10. **Transparency**: `note process --verbose` shows extraction steps and reasoning.
+
+11. **Smart Relink**: `--smart` flag processes <20% of docs for 90%+ accuracy improvement.
+
+12. **Refinement**: After 6 months, relinking resolves 80%+ of initially ambiguous references.
+
+13. **Debugging**: `note debug` explains why entities were extracted.
+
+14. **Implicit Discovery**: Discovers meaningful implicit relationships via co-mention analysis.
 
 ---
 
@@ -610,23 +181,29 @@ The prototype is successful when:
 - No sync / multi-device
 - No mobile
 - No plugin system
-- No real-time extraction (process on demand via `note process`, not on file save)
+- No real-time extraction (manual `note process` only)
 - No user accounts or multi-user
-- No vector/semantic search (FTS5 is enough for now)
-- No image/PDF processing (text-based files only: .md, .txt, .csv, .json)
+- No vector/semantic search (FTS5 only)
+- No image/PDF processing initially (text files: .md, .txt, .csv, .json)
 - No web clipper
-- No file watching (manual `note scan` for now; P2 for fs watcher)
+- No file watching (manual `note scan`)
 
 ---
 
 ## Open Questions
 
-1. **Extraction prompt tuning** — How much prompt engineering is needed to get reliable structured output from different local LLMs? Should we use JSON mode / function calling?
+1. **Prompt Engineering**: How much tuning needed for reliable extraction across different LLMs?
 
-2. **Entity merging UX** — When the system detects a potential duplicate, should it auto-merge (with undo) or ask for confirmation? Prototype: auto-merge with a log.
+2. **Entity Merging**: Auto-merge with log, or interactive confirmation?
 
-3. **Graph depth for `note ask`** — How many hops of context to include when answering questions? Start with 2 hops and tune.
+3. **Relink Frequency**: Auto-suggest after N new notes, or manual only?
 
-4. **Relink frequency** — How often should `--relink` run? Could track a "last_relinked_at" timestamp and suggest relinking when many new entities have been added since.
+4. **Multi-Pass vs. Single-Pass**: Always multi-pass, or auto-detect based on doc length?
 
-5. **Large file handling** — What's the cutoff for sending a file's text to the LLM? Truncate? Chunk and merge? Start simple: truncate to model's context window with a warning.
+5. **Smart Relink Heuristics**: Which criteria best identify docs needing reprocessing?
+
+---
+
+## See Also
+
+- **TDD.md**: Technical Design Document (data models, algorithms, implementation details)
